@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Launch Radar — pre-token protocols ranked by implied value</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="mark" aria-hidden="true"></div>
+    <div>
+      <h1>Token Launch Radar</h1>
+      <p class="tagline">Pre-token protocols ranked by implied value, from one sealed snapshot.</p>
+    </div>
+  </div>
+  <div class="topstats" id="topstats"></div>
+</header>
+
+<nav class="tabs" aria-label="Views">
+  <button type="button" class="tab active" id="tab-board">Board</button>
+  <button type="button" class="tab" id="tab-method">Method &amp; comparables</button>
+</nav>
+
+<main>
+  <!-- ============ BOARD VIEW ============ -->
+  <section id="view-board">
+    <div class="filters" role="search">
+      <label class="f-search">Search
+        <input type="search" id="f-q" placeholder="Protocol name…">
+      </label>
+      <label>Category
+        <select id="f-cat"><option value="">All categories</option></select>
+      </label>
+      <label>Chain
+        <select id="f-chain"><option value="">All chains</option></select>
+      </label>
+      <label>Min implied value
+        <select id="f-min">
+          <option value="0">Any</option>
+          <option value="1000000">$1M+</option>
+          <option value="10000000">$10M+</option>
+          <option value="50000000">$50M+</option>
+          <option value="100000000">$100M+</option>
+          <option value="500000000">$500M+</option>
+          <option value="1000000000">$1B+</option>
+        </select>
+      </label>
+      <label class="f-check">
+        <input type="checkbox" id="f-wl"> Watchlist only
+      </label>
+      <span class="count" id="count"></span>
+    </div>
+
+    <div class="tablewrap">
+      <table class="board" id="board">
+        <thead>
+          <tr>
+            <th data-key="rank" class="num sortable">Rank</th>
+            <th data-key="name" class="sortable">Protocol</th>
+            <th data-key="category" class="sortable">Category</th>
+            <th>Chains</th>
+            <th data-key="tvl_usd" class="num sortable">TVL</th>
+            <th data-key="change_7d" class="num sortable">7d %</th>
+            <th data-key="age_days" class="num sortable">Age</th>
+            <th data-key="implied_value_usd" class="num sortable">Implied value</th>
+          </tr>
+        </thead>
+        <tbody id="board-body"></tbody>
+      </table>
+    </div>
+    <p class="hint">Click a row for the protocol's detail view: the model's arithmetic and its full farm plan. Click a column heading to sort.</p>
+  </section>
+
+  <!-- ============ DETAIL VIEW ============ -->
+  <section id="view-detail" hidden>
+    <button type="button" class="back" id="back-board">← Back to board</button>
+    <div id="detail-body"></div>
+  </section>
+
+  <!-- ============ METHOD VIEW ============ -->
+  <section id="view-method" hidden>
+    <div class="method-grid">
+      <article class="panel prose">
+        <h2>How the implied value is derived</h2>
+        <p>Every protocol on this board records no token in the snapshot. Its
+        <strong>implied value</strong> is what a token would be worth if the protocol's
+        record stayed as it is. It is computed, never assigned by hand:</p>
+        <p class="formula">implied value = TVL × category multiple × momentum × maturity</p>
+        <dl class="defs">
+          <dt>Category multiple</dt>
+          <dd>The median market-cap / TVL of the snapshot's <em>own</em> traded protocols in the
+          same category — the board is priced from the snapshot's comparables, not from an outside
+          list. Thin categories are shrunk toward the global median (prior strength 4) and every
+          multiple is clamped to [0.02, 3]. The fitted table is below.</dd>
+          <dt>Momentum</dt>
+          <dd>From the 7-day TVL change: multiplier 1 + 0.6 × change, with the change clamped to
+          [−50%, +100%], so one hot week can lift a value by at most 60% and a bad week cannot
+          erase it.</dd>
+          <dt>Maturity</dt>
+          <dd>From the days the protocol has been tracked with no token: 0.55 for a brand-new
+          listing, rising linearly to 1.00 at 1,460 days. A protocol with no listing date is
+          treated as 730 days old. Time survived without a token is evidence the launch, when it
+          comes, is a considered one.</dd>
+        </dl>
+        <h3>Scope of the board</h3>
+        <p>The board is the 40-protocol watchlist (pre-token, TVL at or above the $50M floor)
+        <em>plus</em> every pre-token protocol below the floor — the early finds a radar exists
+        for. Protocols above the floor that are not on the watchlist are wrapped, staked or
+        bridged products of tokens that already trade; they are not launch candidates and appear
+        under <strong>Comparables</strong> instead, where their real market caps calibrate the
+        model.</p>
+        <p class="fineprint" id="scope-note"></p>
+      </article>
+
+      <article class="panel">
+        <h2>Calibration — fitted category multiples</h2>
+        <p class="panel-note">Median market-cap / TVL of traded protocols in the snapshot, per
+        category, and the multiple the model uses after shrinkage to the global median.</p>
+        <div class="tablewrap slim">
+          <table class="mini" id="calib">
+            <thead><tr><th>Category</th><th class="num">Comps</th><th class="num">Median mcap/TVL</th><th class="num">Used multiple</th></tr></thead>
+            <tbody id="calib-body"></tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+
+    <article class="panel">
+      <h2>Comparables — protocols whose token already trades</h2>
+      <p class="panel-note">These are not launch candidates. Their live market caps are the
+      evidence the category multiples are fitted from; the same snapshot, the same day.</p>
+      <div class="tablewrap slim">
+        <table class="mini" id="comps">
+          <thead><tr><th>Protocol</th><th>Category</th><th class="num">TVL</th><th class="num">Market cap</th><th class="num">mcap / TVL</th></tr></thead>
+          <tbody id="comps-body"></tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+</main>
+
+<footer>
+  <p id="foot-note"></p>
+</footer>
+
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
